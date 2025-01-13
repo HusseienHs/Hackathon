@@ -115,8 +115,12 @@ class Client:
         udp_time = end_time - start_time
         udp_speed = (file_size * 8) / udp_time
         udp_loss = 100 * (1 - (self.received_udp_segments / self.total_udp_segments))
+        # convert udp_time to millliseconds
+        udp_time = udp_time * 1000
+        # convert udp_speed to kilo bits/sec
+        udp_speed = udp_speed / 1000
 
-        print(f"UDP transfer finished in {udp_time:.2f} seconds, speed: {udp_speed:.2f} bits/sec, loss: {udp_loss:.2f}%")
+        print(f"UDP transfer finished in {udp_time:.2f} millliseconds, speed: {udp_speed:.2f} kilo bits/sec, loss: {udp_loss:.2f}%")
 
     def send_tcp_request(self, server_address, tcp_port, file_size):
         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -136,7 +140,12 @@ class Client:
         tcp_time = end_time - start_time
         tcp_speed = (file_size * 8) / tcp_time
 
-        print(f"TCP transfer finished in {tcp_time:.2f} seconds, speed: {tcp_speed:.2f} bits/sec")
+        # convert tcp tcp_time to milliseconds
+        tcp_time = tcp_time * 1000
+        # convert tcp_speed to kilo bits/sec
+        tcp_speed = tcp_speed / 1000
+
+        print(f"TCP transfer finished in {tcp_time:.2f} milliseconds, speed: {tcp_speed:.2f} kilo bits/sec")
         tcp_socket.close()
 
     def run(self):

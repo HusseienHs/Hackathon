@@ -14,8 +14,7 @@ A simple file transfer system using UDP and TCP protocols. The client and server
 ## Installation 🛠️
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/udp-tcp-file-transfer.git
-   cd udp-tcp-file-transfer
+   git clone [https://github.com/yourusername/udp-tcp-file-transfer.git](https://github.com/HusseienHs/Hackathon.git)
 
 ## Usage 💻
 

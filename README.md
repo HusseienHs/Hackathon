@@ -2,6 +2,11 @@
 
 A simple file transfer system using UDP and TCP protocols. The client and server communicate to send and receive files with custom protocols, supporting multiple concurrent file transfer requests and evaluating performance. 📡
 
+## Team 👨🏻‍💻
+ 
+- **Husseien Hasanin Id : 213971054.
+- **Fadi Zoabi Id : 214026775.
+
 ## Features ⭐
 - **UDP and TCP File Transfer**: Transfer files via UDP and TCP protocols.
 - **Multiple Connections**: Simultaneous UDP and TCP transfers.

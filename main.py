@@ -17,15 +17,19 @@ MAGENTA = "\033[95m"
 CYAN = "\033[96m"
 RESET = "\033[0m"
 
+
 def create_offer_packet(udp_port, tcp_port):
     return struct.pack('!IBHH', MAGIC_COOKIE, OFFER_TYPE, udp_port, tcp_port)
+
 
 def create_request_packet(file_size):
     return struct.pack('!IBQ', MAGIC_COOKIE, REQUEST_TYPE, file_size)
 
+
 def create_payload_packet(total_segments, current_segment, payload):
     header = struct.pack('!IBQQ', MAGIC_COOKIE, PAYLOAD_TYPE, total_segments, current_segment)
     return header + payload
+
 
 class Server:
     def __init__(self, udp_port, tcp_port):
@@ -87,9 +91,14 @@ class Server:
             threading.Thread(target=self.handle_tcp_request, args=(client_socket,)).start()
 
     def run(self):
+        # Get the server's IP address
+        ip_address = socket.gethostbyname(socket.gethostname())
+        print(f"{GREEN}Server started, listening on IP address {ip_address}{RESET}")
+
         threading.Thread(target=self.broadcast_offers, daemon=True).start()
         threading.Thread(target=self.udp_listener, daemon=True).start()
         self.tcp_listener()
+
 
 class Client:
     def __init__(self):
@@ -97,9 +106,10 @@ class Client:
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udp_socket.bind(('', 13117))
         self.total_udp_segments = 0
+        self.transfer_counter = 1  # Track the number of transfers
 
     def listen_for_offers(self):
-        print(f"{CYAN}Client started listening for offers...{RESET}")
+        print(f"{CYAN}Client started, listening for offer requests...{RESET}")
         self.udp_socket.settimeout(40)
         try:
             while True:
@@ -110,11 +120,16 @@ class Client:
                     if magic_cookie == MAGIC_COOKIE and message_type == OFFER_TYPE:
                         print(f"{GREEN}Received offer from {server_address}: UDP {udp_port}, TCP {tcp_port}{RESET}")
                         return server_address[0], udp_port, tcp_port
+
+                except socket.timeout as e:
+                    print(f"{YELLOW}Socket timeout occurred: {e}{RESET}")
+                    continue
                 except Exception as e:
                     print(f"{RED}Error receiving UDP offer: {e}{RESET}")
                     continue
-        finally:
-            self.udp_socket.close()
+        except Exception as e:
+            print(f"{RED}Error in listen_for_offers: {e}{RESET}")
+        # Remove closing here and let the socket stay open throughout the client run
 
     def send_udp_request(self, server_address, udp_port, file_size):
         try:
@@ -126,7 +141,7 @@ class Client:
             udp_socket.sendto(request_packet, (server_address, udp_port))
 
             receiving_udp_segments = 0
-            total_segments = 0
+            total_segments = file_size // 1024 + (1 if file_size % 1024 != 0 else 0)
             last_segment = time.time()
 
             while True:
@@ -156,12 +171,15 @@ class Client:
                         print(f"{RED}UDP transfer timed out. Exiting...{RESET}")
                         break
 
-            # Ensure loss calculation only occurs once and is correct
-            udp_time = (time.time() - start_time) * 1000  # ms
-            udp_speed = (file_size * 8) / udp_time / 1000  # kbps
+            udp_time = (time.time() - start_time)  # seconds
+            udp_speed = (file_size * 8) / udp_time  # bits/second
             udp_loss = max(0, 100 * (1 - (receiving_udp_segments / total_segments)))
 
-            print(f"{GREEN}UDP transfer finished in {udp_time:.2f} milliseconds, speed: {udp_speed:.2f} kilobits/sec, loss: {udp_loss:.2f}%{RESET}")
+            print(f"{GREEN}UDP transfer #{self.transfer_counter} finished, total time: {udp_time:.2f} seconds, "
+                  f"total speed: {udp_speed:.2f} bits/second, percentage of packets received successfully: "
+                  f"{100 - udp_loss:.2f}%{RESET}")
+            self.transfer_counter += 1
+
         finally:
             udp_socket.close()
 
@@ -180,51 +198,57 @@ class Client:
             print(f"{YELLOW}Received {received_bytes} bytes{RESET}")
 
         end_time = time.time()
-        tcp_time = (end_time - start_time) * 1000  # ms
-        tcp_speed = (file_size * 8) / tcp_time / 1000  # kbps
+        tcp_time = (end_time - start_time)  # seconds
+        tcp_speed = (file_size * 8) / tcp_time  # bits/second
 
-        print(f"{GREEN}TCP transfer finished in {tcp_time:.2f} milliseconds, speed: {tcp_speed:.2f} kilobits/sec{RESET}")
+        print(f"{GREEN}TCP transfer #{self.transfer_counter} finished, total time: {tcp_time:.2f} seconds, "
+              f"total speed: {tcp_speed:.2f} bits/second{RESET}")
+        self.transfer_counter += 1
         tcp_socket.close()
 
     def run(self):
-        print(f"{CYAN}Looking for a server...{RESET}")
-        try:
-            server_address, udp_port, tcp_port = self.listen_for_offers()
+        while True:
+            print(f"{CYAN}Looking for a server...{RESET}")
+            try:
+                server_address, udp_port, tcp_port = self.listen_for_offers()
 
-            # Get file size and number of connections from the user
-            file_size = int(input(f"{YELLOW}Enter file size for transfer (in bytes): {RESET}"))
-            num_udp_connections = int(input(f"{YELLOW}Enter number of UDP connections: {RESET}"))
-            num_tcp_connections = int(input(f"{YELLOW}Enter number of TCP connections: {RESET}"))
+                # Get file size and number of connections from the user
+                file_size = int(input(f"{YELLOW}Enter file size for transfer (in bytes): {RESET}"))
+                num_udp_connections = int(input(f"{YELLOW}Enter number of UDP connections: {RESET}"))
+                num_tcp_connections = int(input(f"{YELLOW}Enter number of TCP connections: {RESET}"))
 
-            self.total_udp_segments = file_size // 1024 + (1 if file_size % 1024 != 0 else 0)
+                self.total_udp_segments = file_size // 1024 + (1 if file_size % 1024 != 0 else 0)
 
-            # Start multiple UDP connections
-            print(f"{CYAN}Testing {num_udp_connections} UDP transfer(s)...{RESET}")
-            udp_threads = []
-            for _ in range(num_udp_connections):
-                udp_thread = threading.Thread(target=self.send_udp_request, args=(server_address, udp_port, file_size))
-                udp_thread.start()
-                udp_threads.append(udp_thread)
+                # Start multiple UDP connections
+                print(f"{CYAN}Testing {num_udp_connections} UDP transfer(s)...{RESET}")
+                udp_threads = []
+                for _ in range(num_udp_connections):
+                    udp_thread = threading.Thread(target=self.send_udp_request, args=(server_address, udp_port, file_size))
+                    udp_thread.start()
+                    udp_threads.append(udp_thread)
 
-            # Start multiple TCP connections
-            print(f"{CYAN}Testing {num_tcp_connections} TCP transfer(s)...{RESET}")
-            tcp_threads = []
-            for _ in range(num_tcp_connections):
-                tcp_thread = threading.Thread(target=self.send_tcp_request, args=(server_address, tcp_port, file_size))
-                tcp_thread.start()
-                tcp_threads.append(tcp_thread)
+                # Start multiple TCP connections
+                print(f"{CYAN}Testing {num_tcp_connections} TCP transfer(s)...{RESET}")
+                tcp_threads = []
+                for _ in range(num_tcp_connections):
+                    tcp_thread = threading.Thread(target=self.send_tcp_request, args=(server_address, tcp_port, file_size))
+                    tcp_thread.start()
+                    tcp_threads.append(tcp_thread)
 
-            # Wait for all UDP threads to complete
-            for thread in udp_threads:
-                thread.join()
+                # Wait for all UDP threads to complete
+                for thread in udp_threads:
+                    thread.join()
 
-            # Wait for all TCP threads to complete
-            for thread in tcp_threads:
-                thread.join()
+                # Wait for all TCP threads to complete
+                for thread in tcp_threads:
+                    thread.join()
 
-            print(f"{GREEN}All transfers complete, listening to offer requests...{RESET}")
-        except Exception as e:
-            print(f"{RED}Error in client: {e}{RESET}")
+                print(f"{GREEN}All transfers complete, listening to offer requests...{RESET}")
+
+            except Exception as e:
+                print(f"{RED}Error in client: {e}{RESET}")
+
+
 
 if __name__ == "__main__":
     role = input(f"{YELLOW}Are you running the server or client? (server/client): {RESET}").strip().lower()

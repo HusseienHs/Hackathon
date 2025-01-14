@@ -14,7 +14,7 @@ A simple file transfer system using UDP and TCP protocols. The client and server
 ## Installation 🛠️
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/HusseienHs/Hackathon.git]
+   git clone https://github.com/HusseienHs/Hackathon.git
 
 ## Usage 💻
 

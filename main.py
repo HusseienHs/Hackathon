@@ -78,33 +78,59 @@ class Server:
         threading.Thread(target=self.udp_listener, daemon=True).start()
         self.tcp_listener()
 from threading import Lock
+<<<<<<< HEAD
+=======
+
+
+
+
+
+
+>>>>>>> 4063d5b73b2e5f81b550fa2b929823d9cb233781
 
 class Client:
     def __init__(self):
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udp_socket.bind(('', 13117))
-        self.received_udp_segments = 0
         self.total_udp_segments = 0
+<<<<<<< HEAD
         self.lock = Lock()  # Add a lock for thread safety
 
     def increment_segments(self):
         with self.lock:
             self.received_udp_segments += 1
 
+=======
+>>>>>>> 4063d5b73b2e5f81b550fa2b929823d9cb233781
     def listen_for_offers(self):
-        while True:
-            data, server_address = self.udp_socket.recvfrom(1024)
-            magic_cookie, message_type, udp_port, tcp_port = struct.unpack('!IBHH', data)
+        print("client started listening for offers ....")
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        udp_socket.bind(('', 13117))
+        udp_socket.settimeout(40)
+        try:
+            while True:
+                try:
+                    data, server_address = udp_socket.recvfrom(1024)
+                    magic_cookie, message_type, udp_port, tcp_port = struct.unpack('!IBHH', data)
 
-            if magic_cookie == MAGIC_COOKIE and message_type == OFFER_TYPE:
-                print(f"Received offer from {server_address}: UDP {udp_port}, TCP {tcp_port}")
-                return server_address[0], udp_port, tcp_port
+                    if magic_cookie == MAGIC_COOKIE and message_type == OFFER_TYPE:
+                        print(f"Received offer from {server_address}: UDP {udp_port}, TCP {tcp_port}")
+                        return server_address[0], udp_port, tcp_port
+                except Exception as e:
+                    print(f"Error receiving UDP offer: {e}")
+                    continue
+        finally:
+            udp_socket.close()
 
-    def send_udp_request(self, server_address, udp_port, file_size):
-        request_packet = create_request_packet(file_size)
-        self.udp_socket.sendto(request_packet, (server_address, udp_port))
+    def send_udp_request(self, server_address, num_udp_conn,udp_port, file_size):
+        try:
+            request_packet = create_request_packet(file_size // num_udp_conn)
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_socket.settimeout(1)
 
+<<<<<<< HEAD
         start_time = time.time()
         while True:
             try:
@@ -136,15 +162,61 @@ class Client:
 
         print(
             f"UDP transfer finished in {udp_time:.2f} milliseconds, speed: {udp_speed:.2f} kilobits/sec, loss: {udp_loss:.2f}%")
+=======
+            start_time = time.time()
+            udp_socket.sendto(request_packet, (server_address, udp_port))
 
-    def send_tcp_request(self, server_address, tcp_port, file_size):
+            revceving_udp_segments = 0
+            total_segments = 0
+            last_segment = time.time()
+
+            while True:
+                try:
+                    data, _ = self.udp_socket.recvfrom(2048)
+
+                    if len(data) < 21:  # 21 bytes is the minimum size of a valid payload packet
+                        print("Received an invalid UDP packet (too small). Skipping...")
+                        continue
+                    revceving_udp_segments += 1
+                    last_segment = time.time()
+
+                    magic_cookie, message_type, total_segments, current_segment = struct.unpack('!IBQQ', data[:21])
+
+                    if magic_cookie != MAGIC_COOKIE or message_type != PAYLOAD_TYPE:
+                        print("Invalid payload received. Skipping...")
+                        continue
+>>>>>>> 4063d5b73b2e5f81b550fa2b929823d9cb233781
+
+                    if not (1 <= current_segment <= total_segments):
+                        print(f"Out-of-range segment: {current_segment}/{total_segments}")
+                        continue
+
+                    if current_segment == total_segments:
+                        break
+                except socket.timeout as e:
+                    if time.time() - last_segment > 1:
+                        print("UDP transfer timed out. Exiting...")
+                        break
+
+            # Ensure loss calculation only occurs once and is correct
+            udp_time = (time.time() - start_time) * 1000  # ms
+            udp_speed = (file_size * 8) / udp_time / 1000  # kbps
+            udp_loss = max(0, 100 * (1 - (revceving_udp_segments / total_segments)))
+
+            print(
+                f"UDP transfer finished in {udp_time:.2f} milliseconds, speed: {udp_speed:.2f} kilobits/sec, loss: {udp_loss:.2f}%")
+        finally:
+            udp_socket.close()
+
+    def send_tcp_request(self, server_address, tcp_port ,num_tcp_connections,file_size):
         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp_socket.connect((server_address, tcp_port))
+        segment_size = file_size // num_tcp_connections
         tcp_socket.sendall(f"{file_size}\n".encode())
 
         start_time = time.time()
         received_bytes = 0
-        while True:
+        while received_bytes < segment_size:
             data = tcp_socket.recv(1024)
             if not data:
                 break
@@ -165,8 +237,10 @@ class Client:
 
     def run(self):
         print("Looking for a server...")
-        server_address, udp_port, tcp_port = self.listen_for_offers()
+        try:
+            server_address, udp_port, tcp_port = self.listen_for_offers()
 
+<<<<<<< HEAD
         # Get file size and number of connections from the user
         file_size = int(input("Enter file size for transfer (in bytes): "))
         num_udp_connections = int(input("Enter number of UDP connections: "))
@@ -197,8 +271,42 @@ class Client:
         # Wait for all TCP threads to complete
         for thread in tcp_threads:
             thread.join()
+=======
+            # Get file size and number of connections from the user
+            file_size = int(input("Enter file size for transfer (in bytes): "))
+            num_udp_connections = int(input("Enter number of UDP connections: "))
+            num_tcp_connections = int(input("Enter number of TCP connections: "))
 
-        print("All transfers complete, listening to offer requests...")
+            self.total_udp_segments = file_size // 1024 + (1 if file_size % 1024 != 0 else 0)
+
+            # Start multiple UDP connections
+            print(f"Testing {num_udp_connections} UDP transfer(s)...")
+            udp_threads = []
+            for _ in range(num_udp_connections):
+                udp_thread = threading.Thread(target=self.send_udp_request, args=(server_address, udp_port,num_udp_connections, file_size))
+                udp_thread.start()
+                udp_threads.append(udp_thread)
+
+            # Start multiple TCP connections
+            print(f"Testing {num_tcp_connections} TCP transfer(s)...")
+            tcp_threads = []
+            for _ in range(num_tcp_connections):
+                tcp_thread = threading.Thread(target=self.send_tcp_request,args=(server_address, tcp_port, num_tcp_connections,file_size))
+                tcp_thread.start()
+                tcp_threads.append(tcp_thread)
+>>>>>>> 4063d5b73b2e5f81b550fa2b929823d9cb233781
+
+            # Wait for all UDP threads to complete
+            for thread in udp_threads:
+                thread.join()
+
+            # Wait for all TCP threads to complete
+            for thread in tcp_threads:
+                thread.join()
+
+            print("All transfers complete, listening to offer requests...")
+        except Exception as e:
+            print(f"Error in client: {e}")
 
 if __name__ == "__main__":
     role = input("Are you running the server or client? (server/client): ").strip().lower()

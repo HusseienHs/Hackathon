@@ -4,8 +4,8 @@ A simple file transfer system using UDP and TCP protocols. The client and server
 
 ## Team 👨🏻‍💻
  
-- **Husseien Hasanin Id : 213971054.
-- **Fadi Zoabi Id : 214026775.
+- Husseien Hasanin Id : 213971054.
+- Fadi Zoabi Id : 214026775.
 
 ## Features ⭐
 - **UDP and TCP File Transfer**: Transfer files via UDP and TCP protocols.

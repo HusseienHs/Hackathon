@@ -172,11 +172,15 @@ class Client:
                         break
 
             udp_time = (time.time() - start_time)  # seconds
+            # convert to ms
+            udp_time *= 1000  # convert to ms
             udp_speed = (file_size * 8) / udp_time  # bits/second
+            # convert to kbps
+            udp_speed /= 1000  # convert to kbps
             udp_loss = max(0, 100 * (1 - (receiving_udp_segments / total_segments)))
 
-            print(f"{GREEN}UDP transfer #{self.transfer_counter} finished, total time: {udp_time:.2f} seconds, "
-                  f"total speed: {udp_speed:.2f} bits/second, percentage of packets received successfully: "
+            print(f"{GREEN}UDP transfer #{self.transfer_counter} finished, total time: {udp_time:.2f} ms, "
+                  f"total speed: {udp_speed:.2f} kbps, percentage of packets received successfully: "
                   f"{100 - udp_loss:.2f}%{RESET}")
             self.transfer_counter += 1
 
@@ -195,14 +199,17 @@ class Client:
             if not data:
                 break
             received_bytes += len(data)
-            print(f"{YELLOW}Received {received_bytes} bytes{RESET}")
+            # print(f"{YELLOW}Received {received_bytes} bytes{RESET}")
 
         end_time = time.time()
         tcp_time = (end_time - start_time)  # seconds
+        # convert to ms
+        tcp_time *= 1000  # convert to ms
         tcp_speed = (file_size * 8) / tcp_time  # bits/second
-
-        print(f"{GREEN}TCP transfer #{self.transfer_counter} finished, total time: {tcp_time:.2f} seconds, "
-              f"total speed: {tcp_speed:.2f} bits/second{RESET}")
+        # convert to kbps
+        tcp_speed /= 1000  # convert to kbps
+        print(f"{GREEN}TCP transfer #{self.transfer_counter} finished, total time: {tcp_time:.2f} ms, "
+              f"total speed: {tcp_speed:.2f} kbps{RESET}")
         self.transfer_counter += 1
         tcp_socket.close()
 

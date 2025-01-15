@@ -5,6 +5,7 @@ import time
 from shared import create_request_packet, MAGIC_COOKIE, OFFER_TYPE, PAYLOAD_TYPE, RED, GREEN, YELLOW, RESET, CYAN
 
 class Client:
+
     def __init__(self):
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

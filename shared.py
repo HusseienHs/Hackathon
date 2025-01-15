@@ -12,7 +12,6 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 CYAN = "\033[96m"
 
-
 def create_offer_packet(udp_port, tcp_port):
     return struct.pack('!IBHH', MAGIC_COOKIE, OFFER_TYPE, udp_port, tcp_port)
 

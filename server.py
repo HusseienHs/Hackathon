@@ -32,7 +32,8 @@ class Server:
 
             total_segments = file_size // 1024 + (1 if file_size % 1024 != 0 else 0)
             for i in range(total_segments):
-                payload = b'x' * 1024 if i < total_segments - 1 else b'x' * (file_size % 1024)
+                payload = b'x' * 1
+
                 packet = create_payload_packet(total_segments, i + 1, payload)
                 if len(packet) < 21:
                     print(f"{RED}Generated a packet smaller than expected.{RESET}")
@@ -48,7 +49,8 @@ class Server:
     def handle_tcp_request(self, client_socket):
         try:
             file_size = int(client_socket.recv(1024).decode().strip())
-            payload = b'x' * 1024
+            payload = b'x' * 1
+
             total_segments = file_size // 1024 + (1 if file_size % 1024 != 0 else 0)
 
             for _ in range(total_segments):
@@ -71,7 +73,6 @@ class Server:
         threading.Thread(target=self.broadcast_offers, daemon=True).start()
         threading.Thread(target=self.udp_listener, daemon=True).start()
         self.tcp_listener()
-
 
 if __name__ == "__main__":
     udp_port = 8000

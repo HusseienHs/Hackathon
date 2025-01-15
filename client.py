@@ -2,7 +2,7 @@ import socket
 import struct
 import threading
 import time
-from shared import create_offer_packet, create_request_packet, create_payload_packet, MAGIC_COOKIE, OFFER_TYPE, REQUEST_TYPE, PAYLOAD_TYPE, RED, GREEN, YELLOW, RESET, CYAN
+from shared import create_request_packet, MAGIC_COOKIE, OFFER_TYPE, PAYLOAD_TYPE, RED, GREEN, YELLOW, RESET, CYAN
 
 class Client:
     def __init__(self):
@@ -144,7 +144,6 @@ class Client:
 
             except Exception as e:
                 print(f"{RED}Error in client: {e}{RESET}")
-
 
 if __name__ == "__main__":
     client = Client()
